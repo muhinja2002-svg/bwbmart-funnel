@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BWBMart Revenue Intelligence</title>
+
+  <!-- Amplitude SDK -->
+  <script src="https://cdn.amplitude.com/script/3bd259aa3ad31160c904ef12c3d444ee.js"></script>
+  <script>
+    window.amplitude.add(window.sessionReplay.plugin({ sampleRate: 1 }));
+    window.amplitude.init('3bd259aa3ad31160c904ef12c3d444ee', {
+      fetchRemoteConfig: true,
+      autocapture: { pageViews: true, sessions: true, elementInteractions: true }
+    });
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Design tokens ──────────────────────────────────────── */
+    :root {
+      --bg:        #0b0f1a;
+      --surface:   #111827;
+      --border:    #1f2d42;
+      --accent:    #3b82f6;
+      --accent-hi: #60a5fa;
+      --success:   #10b981;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --tag-bg:    rgba(59,130,246,.12);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      /* subtle grid background */
+      background-image:
+        linear-gradient(rgba(59,130,246,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    /* ── Progress bar ───────────────────────────────────────── */
+    .progress-bar {
+      width: 100%;
+      max-width: 520px;
+      margin-bottom: 2rem;
+    }
+    .progress-steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .step-dot {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600; color: var(--muted);
+      transition: all .3s ease;
+      flex-shrink: 0;
+      font-family: 'DM Mono', monospace;
+    }
+    .step-dot.active  { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 4px rgba(59,130,246,.15); }
+    .step-dot.done    { border-color: var(--success); background: var(--success); color: #fff; }
+    .step-line {
+      flex: 1; height: 2px;
+      background: var(--border);
+      transition: background .4s ease;
+    }
+    .step-line.done { background: var(--success); }
+    .progress-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: .5rem;
+    }
+    .progress-labels span {
+      font-size: 11px; color: var(--muted); font-weight: 500;
+      width: 28px; text-align: center;
+    }
+
+    /* ── Card ───────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 24px 48px rgba(0,0,0,.4);
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      background: var(--tag-bg);
+      border: 1px solid rgba(59,130,246,.25);
+      color: var(--accent-hi);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: .3rem .75rem;
+      border-radius: 999px;
+      margin-bottom: 1.25rem;
+    }
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; } 50% { opacity: .3; }
+    }
+
+    h1 {
+      font-size: 1.65rem; font-weight: 600;
+      line-height: 1.25;
+      margin-bottom: .6rem;
+      letter-spacing: -.02em;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+
+    /* ── Social proof ───────────────────────────────────────── */
+    .social-proof {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: .875rem 1rem;
+      background: rgba(16,185,129,.07);
+      border: 1px solid rgba(16,185,129,.2);
+      border-radius: 10px;
+      margin-bottom: 1.75rem;
+    }
+    .social-proof-icon { font-size: 1.2rem; }
+    .social-proof p  { font-size: .82rem; color: #6ee7b7; line-height: 1.4; }
+    .social-proof strong { color: #a7f3d0; }
+
+    /* ── Form elements ──────────────────────────────────────── */
+    label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      margin-bottom: .4rem;
+    }
+    input, select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .75rem 1rem;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: .95rem;
+      margin-bottom: 1.1rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted); }
+    select option { background: var(--surface); }
+
+    /* ── Buttons ────────────────────────────────────────────── */
+    .btn {
+      display: block;
+      width: 100%;
+      padding: .875rem 1.5rem;
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all .2s;
+      margin-bottom: .6rem;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hi); transform: translateY(-1px); box-shadow: 0 8px 20px rgba(59,130,246,.35); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--accent-hi);
+      border: 1.5px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--accent); background: var(--tag-bg); }
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+    }
+    .btn-success:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+    .helper { font-size: .78rem; color: var(--muted); text-align: center; margin-top: .5rem; }
+
+    /* ── Plan cards ─────────────────────────────────────────── */
+    .plans { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; margin-bottom: 1.5rem; }
+    .plan {
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all .2s;
+      position: relative;
+    }
+    .plan:hover { border-color: var(--accent); }
+    .plan.selected { border-color: var(--accent); background: var(--tag-bg); }
+    .plan-name { font-size: .85rem; font-weight: 600; margin-bottom: .2rem; }
+    .plan-price { font-family: 'DM Mono', monospace; font-size: 1.1rem; color: var(--accent-hi); }
+    .plan-tag {
+      position: absolute; top: .5rem; right: .5rem;
+      font-size: .65rem; font-weight: 700;
+      background: var(--accent); color: #fff;
+      padding: .15rem .4rem; border-radius: 4px;
+      letter-spacing: .04em; text-transform: uppercase;
+    }
+
+    /* ── Confirmation ───────────────────────────────────────── */
+    .tick-circle {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: rgba(16,185,129,.12);
+      border: 2px solid var(--success);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem;
+      margin: 0 auto 1.25rem;
+    }
+    .metric-row {
+      display: grid; grid-template-columns: 1fr 1fr 1fr;
+      gap: .5rem;
+      margin: 1.5rem 0;
+    }
+    .metric {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .75rem;
+      text-align: center;
+    }
+    .metric-val {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.15rem;
+      color: var(--accent-hi);
+      font-weight: 500;
+    }
+    .metric-lbl { font-size: .7rem; color: var(--muted); margin-top: .15rem; }
+
+    /* ── Step visibility ────────────────────────────────────── */
+    .step { display: none; }
+    .step.active { display: block; animation: fadeIn .3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+    /* ── Attribution footer ─────────────────────────────────── */
+    .attribution {
+      margin-top: 1.5rem;
+      font-size: .72rem;
+      color: var(--muted);
+      text-align: center;
+      font-family: 'DM Mono', monospace;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div class="progress-bar">
+  <div class="progress-steps">
+    <div class="step-dot active" id="dot-1">1</div>
+    <div class="step-line" id="line-1"></div>
+    <div class="step-dot" id="dot-2">2</div>
+    <div class="step-line" id="line-2"></div>
+    <div class="step-dot" id="dot-3">3</div>
+    <div class="step-line" id="line-3"></div>
+    <div class="step-dot" id="dot-4">4</div>
+  </div>
+  <div class="progress-labels">
+    <span>Land</span>
+    <span>Sign up</span>
+    <span>Plan</span>
+    <span>Done</span>
+  </div>
+</div>
+
+<!-- ── STEP 1: Landing ──────────────────────────────────────── -->
+<div class="card step active" id="step-1">
+  <div class="badge"><span class="badge-dot"></span>Live Amplitude Demo</div>
+  <p style="font-size:.72rem;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:.75rem;">
+    Rawlings Muhinja · BWBMart Funnel Assessment 2026
+  </p>
+  <h1>Build predictable SaaS revenue</h1>
+  <p class="subtitle">
+    Identify high-intent customers before they churn. Score leads automatically.
+    Close deals 3× faster with behavioural intelligence.
+  </p>
+  <div class="social-proof">
+    <span class="social-proof-icon">📈</span>
+    <p><strong>247 companies</strong> improved pipeline conversion by an average of <strong>34%</strong> in 90 days.</p>
+  </div>
+  <button class="btn btn-primary" onclick="trackAndAdvance('Click Sign Up', {button:'signup', intent:'high', page:'landing'}, 2)">
+    Get Started Free
+  </button>
+  <button class="btn btn-secondary" onclick="trackAndAdvance('Click Request Demo', {button:'demo', intent:'medium', page:'landing'}, 2)">
+    Request a Demo
+  </button>
+  <p class="helper">No credit card required · Setup in 5 minutes</p>
+</div>
+
+<!-- ── STEP 2: Sign Up ──────────────────────────────────────── -->
+<div class="card step" id="step-2">
+  <div class="badge"><span class="badge-dot"></span>Step 2 of 4</div>
+  <h1>Create your account</h1>
+  <p class="subtitle">We track every field interaction in Amplitude — this is a live funnel demo.</p>
+
+  <label>Work email</label>
+  <input type="email" id="email" placeholder="you@company.com"
+    onfocus="track('Field Focus', {field:'email'})" />
+
+  <label>Full name</label>
+  <input type="text" id="name" placeholder="Rawlings Muhinja"
+    onfocus="track('Field Focus', {field:'full_name'})" />
+
+  <label>Company</label>
+  <input type="text" id="company" placeholder="BWBMart"
+    onfocus="track('Field Focus', {field:'company'})" />
+
+  <label>Company size</label>
+  <select onfocus="track('Field Focus', {field:'company_size'})">
+    <option value="">Select…</option>
+    <option>1–10</option><option>11–50</option>
+    <option>51–200</option><option>200+</option>
+  </select>
+
+  <button class="btn btn-primary" onclick="submitSignup()">Continue →</button>
+  <button class="btn btn-secondary" onclick="goBack(1)">← Back</button>
+</div>
+
+<!-- ── STEP 3: Plan selection ───────────────────────────────── -->
+<div class="card step" id="step-3">
+  <div class="badge"><span class="badge-dot"></span>Step 3 of 4</div>
+  <h1>Choose your plan</h1>
+  <p class="subtitle">Plan selection is tracked as a key funnel event — high-intent signal.</p>
+
+  <div class="plans">
+    <div class="plan" id="plan-starter" onclick="selectPlan('starter', '$49/mo')">
+      <div class="plan-name">Starter</div>
+      <div class="plan-price">$49<span style="font-size:.7rem;color:var(--muted)">/mo</span></div>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:.4rem">Up to 1k leads</div>
+    </div>
+    <div class="plan" id="plan-growth" onclick="selectPlan('growth', '$149/mo')">
+      <div class="plan-tag">Popular</div>
+      <div class="plan-name">Growth</div>
+      <div class="plan-price">$149<span style="font-size:.7rem;color:var(--muted)">/mo</span></div>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:.4rem">Up to 10k leads</div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="plan-btn" onclick="confirmPlan()" disabled
+    style="opacity:.5;cursor:not-allowed">
+    Confirm Plan →
+  </button>
+  <button class="btn btn-secondary" onclick="goBack(2)">← Back</button>
+</div>
+
+<!-- ── STEP 4: Confirmation ─────────────────────────────────── -->
+<div class="card step" id="step-4">
+  <div style="text-align:center">
+    <div class="tick-circle">✓</div>
+    <div class="badge" style="margin:0 auto 1rem"><span class="badge-dot"></span>Conversion tracked</div>
+    <h1>You're in.</h1>
+    <p class="subtitle">
+      This completed funnel was tracked end-to-end in Amplitude.<br/>
+      Open the <strong style="color:var(--accent-hi)">analytics dashboard</strong> to see the drop-off model.
+    </p>
+  </div>
+
+  <div class="metric-row">
+    <div class="metric">
+      <div class="metric-val">4</div>
+      <div class="metric-lbl">Funnel steps</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val" id="event-count">0</div>
+      <div class="metric-lbl">Events fired</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val" id="elapsed-time">0s</div>
+      <div class="metric-lbl">Session time</div>
+    </div>
+  </div>
+
+  <a href="funnel-dashboard.html">
+    <button class="btn btn-success">View Funnel Analytics →</button>
+  </a>
+  <button class="btn btn-secondary" onclick="resetFunnel()">↺ Replay funnel</button>
+</div>
+
+<div class="attribution">
+  github.com/muhinja2002-svg · Amplitude funnel tracking demo · 2026
+</div>
+
+<script>
+  // ── State ────────────────────────────────────────────────────
+  let currentStep   = 1;
+  let eventCount    = 0;
+  let selectedPlan  = null;
+  const startTime   = Date.now();
+
+  // ── Amplitude helpers ────────────────────────────────────────
+  function track(name, props = {}) {
+    window.amplitude.track(name, { ...props, funnel_step: currentStep, timestamp: new Date().toISOString() });
+    eventCount++;
+  }
+
+  function trackAndAdvance(name, props, nextStep) {
+    track(name, props);
+    goToStep(nextStep);
+  }
+
+  // ── Navigation ───────────────────────────────────────────────
+  function goToStep(n) {
+    document.getElementById(`step-${currentStep}`).classList.remove('active');
+
+    // update progress dots
+    for (let i = 1; i <= 4; i++) {
+      const dot  = document.getElementById(`dot-${i}`);
+      const line = document.getElementById(`line-${i}`);
+      dot.classList.remove('active', 'done');
+      if (i < n)       { dot.classList.add('done'); }
+      else if (i === n){ dot.classList.add('active'); }
+      if (line && i < n) line.classList.add('done');
+      else if (line)     line.classList.remove('done');
+    }
+
+    currentStep = n;
+    document.getElementById(`step-${n}`).classList.add('active');
+    track('Funnel Step View', { step: n });
+  }
+
+  function goBack(n) {
+    track('Click Back', { from_step: currentStep });
+    goToStep(n);
+  }
+
+  // ── Step 2: Sign-up validation ───────────────────────────────
+  function submitSignup() {
+    const email   = document.getElementById('email').value.trim();
+    const name    = document.getElementById('name').value.trim();
+    const company = document.getElementById('company').value.trim();
+
+    if (!email || !name || !company) {
+      track('Form Validation Error', { missing_fields: true, step: 2 });
+      alert('Please fill in all fields to continue.');
+      return;
+    }
+
+    // Identify user in Amplitude
+    window.amplitude.setUserId(email);
+    window.amplitude.identify(new window.amplitude.Identify()
+      .set('name', name)
+      .set('company', company)
+    );
+
+    track('Sign Up Completed', { email, name, company, step: 2 });
+    goToStep(3);
+  }
+
+  // ── Step 3: Plan selection ───────────────────────────────────
+  function selectPlan(plan, price) {
+    selectedPlan = plan;
+    document.querySelectorAll('.plan').forEach(el => el.classList.remove('selected'));
+    document.getElementById(`plan-${plan}`).classList.add('selected');
+    const btn = document.getElementById('plan-btn');
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor  = 'pointer';
+    track('Plan Selected', { plan, price, intent: plan === 'growth' ? 'high' : 'medium' });
+  }
+
+  function confirmPlan() {
+    if (!selectedPlan) return;
+    track('Plan Confirmed', { plan: selectedPlan, step: 3 });
+    goToStep(4);
+    // update confirmation metrics
+    document.getElementById('event-count').textContent = eventCount;
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    document.getElementById('elapsed-time').textContent = elapsed + 's';
+    track('Funnel Completed', { total_events: eventCount, session_seconds: elapsed });
+  }
+
+  // ── Reset ────────────────────────────────────────────────────
+  function resetFunnel() {
+    eventCount   = 0;
+    selectedPlan = null;
+    document.getElementById('email').value   = '';
+    document.getElementById('name').value    = '';
+    document.getElementById('company').value = '';
+    document.querySelectorAll('.plan').forEach(el => el.classList.remove('selected'));
+    const btn = document.getElementById('plan-btn');
+    btn.disabled = true;
+    btn.style.opacity = '.5';
+    btn.style.cursor  = 'not-allowed';
+    goToStep(1);
+  }
+</script>
+</body>
+</html>

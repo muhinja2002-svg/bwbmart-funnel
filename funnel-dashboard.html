@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Funnel Analytics Dashboard · BWBMart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:      #0b0f1a;
+      --surface: #111827;
+      --surface2:#141e2e;
+      --border:  #1f2d42;
+      --accent:  #3b82f6;
+      --accent2: #60a5fa;
+      --success: #10b981;
+      --warn:    #f59e0b;
+      --danger:  #ef4444;
+      --text:    #e2e8f0;
+      --muted:   #64748b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem;
+      background-image:
+        linear-gradient(rgba(59,130,246,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    /* ── Header ── */
+    header {
+      max-width: 1100px;
+      margin: 0 auto 2rem;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .header-left h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -.02em; }
+    .header-left p  { color: var(--muted); font-size: .85rem; margin-top: .3rem; }
+    .header-meta {
+      font-family: 'DM Mono', monospace;
+      font-size: .72rem;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: .4rem .85rem;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    /* ── Grid layout ── */
+    .grid { max-width: 1100px; margin: 0 auto; display: grid; gap: 1rem; }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 700px) {
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    /* ── KPI card ── */
+    .kpi {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+    }
+    .kpi-label { font-size: .72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .4rem; }
+    .kpi-value { font-family: 'DM Mono', monospace; font-size: 2rem; font-weight: 500; line-height: 1; }
+    .kpi-sub   { font-size: .78rem; margin-top: .35rem; }
+    .up   { color: var(--success); }
+    .down { color: var(--danger);  }
+    .neu  { color: var(--muted);   }
+
+    /* ── Panel ── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    .panel-title {
+      font-size: .8rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 1.25rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .panel-title::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ── Funnel chart ── */
+    .funnel-step { margin-bottom: 1.1rem; }
+    .funnel-meta {
+      display: flex; justify-content: space-between;
+      font-size: .8rem; margin-bottom: .4rem;
+    }
+    .funnel-step-name { font-weight: 500; }
+    .funnel-nums { display: flex; gap: 1rem; }
+    .funnel-nums span { color: var(--muted); font-family: 'DM Mono', monospace; font-size: .78rem; }
+    .funnel-nums .n   { color: var(--text); }
+    .bar-track {
+      height: 36px;
+      background: var(--bg);
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      display: flex; align-items: center;
+      padding-left: .75rem;
+      font-size: .78rem; font-weight: 600;
+      color: #fff;
+      transition: width 1.2s cubic-bezier(.4,0,.2,1);
+      width: 0;
+    }
+    .drop-badge {
+      position: absolute;
+      right: .5rem; top: 50%;
+      transform: translateY(-50%);
+      font-size: .7rem; font-family: 'DM Mono', monospace;
+      padding: .15rem .45rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .drop-ok   { background: rgba(16,185,129,.15); color: #6ee7b7; }
+    .drop-warn { background: rgba(245,158,11,.15);  color: #fcd34d; }
+    .drop-bad  { background: rgba(239,68,68,.15);   color: #fca5a5; }
+
+    /* ── Event timeline ── */
+    .timeline { list-style: none; }
+    .timeline li {
+      display: flex; gap: .75rem; align-items: flex-start;
+      padding: .65rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .timeline li:last-child { border-bottom: none; }
+    .tl-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex-shrink: 0; margin-top: .35rem;
+    }
+    .tl-body { flex: 1; }
+    .tl-event { font-size: .85rem; font-weight: 500; }
+    .tl-meta  { font-size: .75rem; color: var(--muted); font-family: 'DM Mono', monospace; margin-top: .1rem; }
+    .tl-time  { font-family: 'DM Mono', monospace; font-size: .72rem; color: var(--muted); white-space: nowrap; }
+
+    /* ── Insight cards ── */
+    .insight {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+      margin-bottom: .65rem;
+      display: flex; gap: .75rem; align-items: flex-start;
+    }
+    .insight-icon { font-size: 1.1rem; flex-shrink: 0; }
+    .insight h4   { font-size: .85rem; font-weight: 600; margin-bottom: .2rem; }
+    .insight p    { font-size: .78rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── Back link ── */
+    .back-link {
+      display: inline-flex; align-items: center; gap: .4rem;
+      color: var(--muted); font-size: .82rem;
+      text-decoration: none;
+      margin-bottom: 1.5rem;
+      max-width: 1100px; display: block;
+      margin: 0 auto 1.5rem;
+    }
+    .back-link:hover { color: var(--accent2); }
+
+    .spacer { margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+
+  <a href="index.html" class="back-link">← Back to funnel demo</a>
+
+  <header>
+    <div class="header-left">
+      <h1>Funnel Analytics Dashboard</h1>
+      <p>BWBMart Revenue Intelligence · Conversion tracking via Amplitude</p>
+    </div>
+    <div class="header-meta">Period: Feb–Apr 2026 · n = 2,840 sessions</div>
+  </header>
+
+  <!-- KPIs -->
+  <div class="grid grid-4 spacer">
+    <div class="kpi">
+      <div class="kpi-label">Total sessions</div>
+      <div class="kpi-value">2,840</div>
+      <div class="kpi-sub up">↑ 18.4% vs prior period</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Conversion rate</div>
+      <div class="kpi-value">6.2<span style="font-size:1.2rem">%</span></div>
+      <div class="kpi-sub up">↑ 1.4pp vs prior period</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Avg. time to convert</div>
+      <div class="kpi-value">3<span style="font-size:1.2rem">m 14s</span></div>
+      <div class="kpi-sub down">↓ 22s vs prior period</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Primary drop-off</div>
+      <div class="kpi-value" style="color:var(--warn)">Step 2</div>
+      <div class="kpi-sub neu">Sign-up form · −41%</div>
+    </div>
+  </div>
+
+  <!-- Funnel + Event log -->
+  <div class="grid grid-2 spacer">
+    <div class="panel">
+      <div class="panel-title">Conversion funnel</div>
+
+      <div class="funnel-step">
+        <div class="funnel-meta">
+          <span class="funnel-step-name">Step 1 · Landing page</span>
+          <div class="funnel-nums"><span class="n">2,840</span><span>100%</span></div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" data-w="100" style="background: var(--accent)">2,840</div>
+        </div>
+      </div>
+
+      <div class="funnel-step">
+        <div class="funnel-meta">
+          <span class="funnel-step-name">Step 2 · Sign-up form</span>
+          <div class="funnel-nums"><span class="n">1,673</span><span>58.9%</span></div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" data-w="58.9" style="background: #2563eb">1,673</div>
+          <span class="drop-badge drop-warn">−41.1%</span>
+        </div>
+      </div>
+
+      <div class="funnel-step">
+        <div class="funnel-meta">
+          <span class="funnel-step-name">Step 3 · Plan selection</span>
+          <div class="funnel-nums"><span class="n">498</span><span>17.5%</span></div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" data-w="17.5" style="background: #1d4ed8">498</div>
+          <span class="drop-badge drop-bad">−70.2%</span>
+        </div>
+      </div>
+
+      <div class="funnel-step">
+        <div class="funnel-meta">
+          <span class="funnel-step-name">Step 4 · Conversion</span>
+          <div class="funnel-nums"><span class="n">176</span><span>6.2%</span></div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" data-w="6.2" style="background: var(--success)">176</div>
+          <span class="drop-badge drop-ok">−64.7%</span>
+        </div>
+      </div>
+
+      <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border)">
+        <div style="font-size:.75rem;color:var(--muted);margin-bottom:.5rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Plan split (converted users)</div>
+        <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.35rem">
+          <div style="width:.6rem;height:.6rem;border-radius:50%;background:var(--accent);flex-shrink:0"></div>
+          <div style="flex:1;height:10px;background:var(--bg);border-radius:4px;overflow:hidden">
+            <div style="width:61%;height:100%;background:var(--accent);border-radius:4px"></div>
+          </div>
+          <span style="font-size:.75rem;font-family:'DM Mono',monospace;color:var(--text)">Growth 61%</span>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          <div style="width:.6rem;height:.6rem;border-radius:50%;background:var(--muted);flex-shrink:0"></div>
+          <div style="flex:1;height:10px;background:var(--bg);border-radius:4px;overflow:hidden">
+            <div style="width:39%;height:100%;background:var(--muted);border-radius:4px"></div>
+          </div>
+          <span style="font-size:.75rem;font-family:'DM Mono',monospace;color:var(--text)">Starter 39%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Live event log</div>
+      <ul class="timeline" id="event-log">
+        <!-- populated by JS -->
+      </ul>
+    </div>
+  </div>
+
+  <!-- Insights -->
+  <div class="panel" style="max-width:1100px;margin:0 auto">
+    <div class="panel-title">Analyst recommendations</div>
+    <div class="insight">
+      <span class="insight-icon">🔴</span>
+      <div>
+        <h4>Critical: 41% drop at sign-up form (Step 2)</h4>
+        <p>The largest single drop-off point is the sign-up form. Four required fields create friction for cold visitors. <strong>Recommendation:</strong> reduce to email only at Step 2 and collect company/role data post-onboarding. Projected impact: +8–12pp on Step 2 conversion based on B2B SaaS benchmarks.</p>
+      </div>
+    </div>
+    <div class="insight">
+      <span class="insight-icon">🟡</span>
+      <div>
+        <h4>High: 70% drop at plan selection (Step 3)</h4>
+        <p>Users who reach Step 3 are already qualified — but only 30% proceed. Session replay data suggests users abandon when they cannot see a feature comparison. <strong>Recommendation:</strong> add a collapsible feature matrix directly on the plan card.</p>
+      </div>
+    </div>
+    <div class="insight">
+      <span class="insight-icon">🟢</span>
+      <div>
+        <h4>Opportunity: Growth plan selected by 61% of converters</h4>
+        <p>The majority of converters choose the higher-value plan without being pushed. This suggests pricing anchoring is working. <strong>Recommendation:</strong> test a third Enterprise tier to shift Growth plan from "Popular" anchor to middle-tier.</p>
+      </div>
+    </div>
+    <div class="insight">
+      <span class="insight-icon">📊</span>
+      <div>
+        <h4>Tracking methodology</h4>
+        <p>All events captured via Amplitude SDK with user identification at sign-up (Step 2). Properties tracked per event: <code style="font-family:'DM Mono',monospace;font-size:.8em;color:var(--accent2)">funnel_step, intent, timestamp</code>. Session replay enabled at 100% sample rate. Funnel analysis performed in Amplitude Charts → Funnel Analysis, with conversion window set to 30 minutes.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:1100px;margin:1.5rem auto 0;font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);text-align:right">
+    github.com/muhinja2002-svg · Rawlings Muhinja · Amplitude funnel analytics demo · 2026
+  </div>
+
+<script>
+  // ── Animate bars on load ────────────────────────────────────
+  document.querySelectorAll('.bar-fill').forEach(el => {
+    const w = el.dataset.w;
+    setTimeout(() => { el.style.width = w + '%'; }, 200);
+  });
+
+  // ── Simulate live event log ─────────────────────────────────
+  const EVENTS = [
+    { event: 'Funnel Step View',    props: 'step:1',                    color: '#3b82f6', time: '0s ago'   },
+    { event: 'Click Sign Up',       props: 'intent:high, page:landing', color: '#10b981', time: '4s ago'   },
+    { event: 'Funnel Step View',    props: 'step:2',                    color: '#3b82f6', time: '4s ago'   },
+    { event: 'Field Focus',         props: 'field:email',               color: '#64748b', time: '8s ago'   },
+    { event: 'Field Focus',         props: 'field:full_name',           color: '#64748b', time: '12s ago'  },
+    { event: 'Sign Up Completed',   props: 'company:BWBMart',           color: '#10b981', time: '18s ago'  },
+    { event: 'Funnel Step View',    props: 'step:3',                    color: '#3b82f6', time: '18s ago'  },
+    { event: 'Plan Selected',       props: 'plan:growth, intent:high',  color: '#f59e0b', time: '24s ago'  },
+    { event: 'Plan Confirmed',      props: 'plan:growth, step:3',       color: '#10b981', time: '27s ago'  },
+    { event: 'Funnel Completed',    props: 'total_events:9',            color: '#10b981', time: '27s ago'  },
+  ];
+
+  const log = document.getElementById('event-log');
+  EVENTS.forEach((e, i) => {
+    setTimeout(() => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <div class="tl-dot" style="background:${e.color}"></div>
+        <div class="tl-body">
+          <div class="tl-event">${e.event}</div>
+          <div class="tl-meta">{${e.props}}</div>
+        </div>
+        <div class="tl-time">${e.time}</div>
+      `;
+      li.style.opacity = '0';
+      li.style.transition = 'opacity .4s ease';
+      log.prepend(li);
+      requestAnimationFrame(() => { li.style.opacity = '1'; });
+      // cap list at 10 items
+      while (log.children.length > 10) log.removeChild(log.lastChild);
+    }, i * 180);
+  });
+</script>
+</body>
+</html>
